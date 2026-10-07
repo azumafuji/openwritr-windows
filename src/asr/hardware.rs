@@ -108,7 +108,11 @@ fn current_whisper_npu_support() -> Result<EngineSupport> {
     }
 }
 
-pub fn whisper_npu_support_for(architecture: &str, windows: bool, processor: Option<&str>) -> EngineSupport {
+pub fn whisper_npu_support_for(
+    architecture: &str,
+    windows: bool,
+    processor: Option<&str>,
+) -> EngineSupport {
     if architecture != "aarch64" {
         return EngineSupport::Unsupported {
             reason: "Requires the ARM64 build on Snapdragon X Elite or X2 Elite.".into(),
@@ -130,7 +134,9 @@ pub fn whisper_npu_support_for(architecture: &str, windows: bool, processor: Opt
         }
     } else {
         EngineSupport::Unsupported {
-            reason: format!("Detected {processor}; this model requires Snapdragon X Elite or X2 Elite."),
+            reason: format!(
+                "Detected {processor}; this model requires Snapdragon X Elite or X2 Elite."
+            ),
         }
     }
 }
@@ -151,7 +157,11 @@ fn current_parakeet_npu_support() -> Result<EngineSupport> {
     }
 }
 
-pub fn parakeet_npu_support_for(architecture: &str, windows: bool, processor: Option<&str>) -> EngineSupport {
+pub fn parakeet_npu_support_for(
+    architecture: &str,
+    windows: bool,
+    processor: Option<&str>,
+) -> EngineSupport {
     if architecture != "aarch64" {
         return EngineSupport::Unsupported {
             reason: "Requires the ARM64 build on Snapdragon X Elite or X2 Elite.".into(),
@@ -173,7 +183,9 @@ pub fn parakeet_npu_support_for(architecture: &str, windows: bool, processor: Op
         }
     } else {
         EngineSupport::Unsupported {
-            reason: format!("Detected {processor}; this model is compiled for Snapdragon X Elite or X2 Elite."),
+            reason: format!(
+                "Detected {processor}; this model is compiled for Snapdragon X Elite or X2 Elite."
+            ),
         }
     }
 }
@@ -241,7 +253,8 @@ mod tests {
         assert!(!whisper_npu_support_for("x86_64", true, None).is_supported());
         assert!(!whisper_npu_support_for("aarch64", false, None).is_supported());
         assert!(
-            !whisper_npu_support_for("aarch64", true, Some("Snapdragon X Plus X1P64100")).is_supported()
+            !whisper_npu_support_for("aarch64", true, Some("Snapdragon X Plus X1P64100"))
+                .is_supported()
         );
         assert!(whisper_npu_support_for(
             "aarch64",
@@ -262,7 +275,8 @@ mod tests {
         assert!(!parakeet_npu_support_for("x86_64", true, None).is_supported());
         assert!(!parakeet_npu_support_for("aarch64", false, None).is_supported());
         assert!(
-            !parakeet_npu_support_for("aarch64", true, Some("Snapdragon X Plus X1P64100")).is_supported()
+            !parakeet_npu_support_for("aarch64", true, Some("Snapdragon X Plus X1P64100"))
+                .is_supported()
         );
         assert!(parakeet_npu_support_for(
             "aarch64",
@@ -278,4 +292,3 @@ mod tests {
         .is_supported());
     }
 }
-

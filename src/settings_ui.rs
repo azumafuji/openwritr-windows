@@ -1722,7 +1722,8 @@ const ENGINE_DESCRIPTORS: &[EngineDescriptor] = &[
     EngineDescriptor {
         id: "whisper_npu",
         title: "Whisper Large v3 Turbo - Snapdragon NPU",
-        description: "Runs the multilingual Whisper encoder and decoder on Snapdragon X Elite and X2 Elite.",
+        description:
+            "Runs the multilingual Whisper encoder and decoder on Snapdragon X Elite and X2 Elite.",
     },
 ];
 

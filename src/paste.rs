@@ -30,9 +30,7 @@ use windows_sys::Win32::{
             SetClipboardData,
         },
         Memory::{GlobalAlloc, GlobalLock, GlobalSize, GlobalUnlock, GMEM_MOVEABLE},
-        Threading::{
-            OpenProcess, QueryFullProcessImageNameW, PROCESS_QUERY_LIMITED_INFORMATION,
-        },
+        Threading::{OpenProcess, QueryFullProcessImageNameW, PROCESS_QUERY_LIMITED_INFORMATION},
     },
 };
 
@@ -474,39 +472,44 @@ impl Drop for RestorationPermit {
 
 impl ClipboardSnapshot {
     fn capture() -> Result<(Self, ClipboardIdentity)> {
-        with_open_clipboard("snapshot the Windows clipboard before automatic paste", || {
-            let initial_identity = current_clipboard_identity()?;
-            let snapshot = if let Some(text) = read_clipboard_unicode_text()? {
-                Self::Text(text)
-            } else if clipboard_has_formats_opened()? {
-                Self::NonText
-            } else {
-                Self::Empty
-            };
-            let final_identity = current_clipboard_identity()?;
+        with_open_clipboard(
+            "snapshot the Windows clipboard before automatic paste",
+            || {
+                let initial_identity = current_clipboard_identity()?;
+                let snapshot = if let Some(text) = read_clipboard_unicode_text()? {
+                    Self::Text(text)
+                } else if clipboard_has_formats_opened()? {
+                    Self::NonText
+                } else {
+                    Self::Empty
+                };
+                let final_identity = current_clipboard_identity()?;
 
-            if initial_identity.sequence != final_identity.sequence {
-                return Err(anyhow!(
+                if initial_identity.sequence != final_identity.sequence {
+                    return Err(anyhow!(
                     "automatic paste aborted because the clipboard changed while OpenWritr was snapshotting it"
                 ));
-            }
+                }
 
-            Ok((snapshot, final_identity))
-        })
+                Ok((snapshot, final_identity))
+            },
+        )
     }
 
     fn restore_unconditionally(&self) -> Result<()> {
         match self {
             ClipboardSnapshot::Empty => clear_clipboard(),
-            ClipboardSnapshot::Text(text) => with_open_clipboard("restore the clipboard snapshot", || {
-                unsafe {
-                    if EmptyClipboard() == 0 {
-                        return Err(std::io::Error::last_os_error())
-                            .context("empty the Windows clipboard");
+            ClipboardSnapshot::Text(text) => {
+                with_open_clipboard("restore the clipboard snapshot", || {
+                    unsafe {
+                        if EmptyClipboard() == 0 {
+                            return Err(std::io::Error::last_os_error())
+                                .context("empty the Windows clipboard");
+                        }
                     }
-                }
-                write_clipboard_text(text)
-            }),
+                    write_clipboard_text(text)
+                })
+            }
             ClipboardSnapshot::NonText => Ok(()),
         }
     }
@@ -987,7 +990,8 @@ fn process_image_name(process_id: u32) -> Option<String> {
     }
     let mut buffer = [0u16; 1024];
     let mut size = buffer.len() as u32;
-    let success = unsafe { QueryFullProcessImageNameW(process, 0, buffer.as_mut_ptr(), &mut size) } != 0;
+    let success =
+        unsafe { QueryFullProcessImageNameW(process, 0, buffer.as_mut_ptr(), &mut size) } != 0;
     unsafe {
         CloseHandle(process);
     }
@@ -995,10 +999,7 @@ fn process_image_name(process_id: u32) -> Option<String> {
         return None;
     }
     let path = String::from_utf16_lossy(&buffer[..size as usize]);
-    let filename = Path::new(&path)
-        .file_name()?
-        .to_str()?
-        .to_ascii_lowercase();
+    let filename = Path::new(&path).file_name()?.to_str()?.to_ascii_lowercase();
     Some(filename)
 }
 
@@ -1022,7 +1023,10 @@ fn clipboard_has_formats_opened() -> Result<bool> {
 
 #[allow(dead_code)]
 fn clipboard_has_formats() -> Result<bool> {
-    with_open_clipboard("inspect the current clipboard contents", clipboard_has_formats_opened)
+    with_open_clipboard(
+        "inspect the current clipboard contents",
+        clipboard_has_formats_opened,
+    )
 }
 
 fn current_clipboard_identity() -> Result<ClipboardIdentity> {
@@ -1554,9 +1558,6 @@ mod tests {
             determine_paste_shortcut(Some("Chrome_WidgetWin_1"), Some("code.exe")),
             PasteShortcut::CtrlV
         );
-        assert_eq!(
-            determine_paste_shortcut(None, None),
-            PasteShortcut::CtrlV
-        );
+        assert_eq!(determine_paste_shortcut(None, None), PasteShortcut::CtrlV);
     }
 }

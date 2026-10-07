@@ -663,7 +663,11 @@ fn validate_manifest(manifest: &ManifestRoot) -> Result<(), ModelError> {
     for model in &manifest.models {
         let target_key = (model.id.as_str(), model.npu_target.as_deref().unwrap_or(""));
         if !model_targets.insert(target_key) {
-            bail!("duplicate model id {} for target {:?}", model.id, model.npu_target);
+            bail!(
+                "duplicate model id {} for target {:?}",
+                model.id,
+                model.npu_target
+            );
         }
         if !directories.insert(model.local_dir.as_str()) {
             bail!("duplicate model directory {}", model.local_dir);
