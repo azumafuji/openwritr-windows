@@ -44,6 +44,8 @@ server.
   during recording to switch cleanup intent live. After transcription the text
   is sent to GitHub Copilot or any OpenAI-compatible API for
   punctuation/grammar polish — using *your* credentials, *off by default*.
+  Dictated questions and requests remain transcript text; the model must not
+  answer or carry them out.
 - **Unobtrusive**: a small overlay pill centers the live level meter and status
   on one line, with purple feedback when enhancement is active; otherwise it's
   just a tray icon.
