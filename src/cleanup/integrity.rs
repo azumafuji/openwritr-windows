@@ -14,7 +14,8 @@
 //!   * a negation was added, removed, or changed,
 //!   * a protected token (URL/email/inline code/acronym) was dropped,
 //!   * confident German/English language drift,
-//!   * a meaningful source collapsed to empty.
+//!   * a meaningful source collapsed to empty,
+//!   * the candidate is implausibly longer than the source transcript.
 //!
 //! Warning-level violations (candidate kept, but noted):
 //!   * an introduced digit that most likely came from spelling out a number
@@ -40,7 +41,7 @@ pub const MAX_INPUT_CHARS: usize = 100_000;
 /// decision on existing input, so consumers pinned to a version (e.g. the
 /// opt-in `cleanup_eval` evaluator's fixture corpus) can detect drift instead
 /// of silently comparing against a moved target.
-pub const VALIDATOR_VERSION: &str = "integrity-v1";
+pub const VALIDATOR_VERSION: &str = "integrity-v2";
 
 /// Severity of an integrity violation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -65,6 +66,9 @@ pub enum ViolationKind {
     LanguageDrift,
     /// A meaningful source became empty.
     SourceBecameEmpty,
+    /// Candidate is implausibly longer than the transcript, consistent with
+    /// the model answering or expanding a dictated request.
+    TranscriptExpanded,
     /// A digit appeared in the candidate that was not in the source (most
     /// likely from spelling out a number). Warning-only initially.
     IntroducedDigit,
@@ -171,6 +175,10 @@ pub fn validate(source: &str, candidate: &str) -> Result<IntegrityReport, Valida
         }
     }
 
+    if is_suspicious_expansion(source, candidate) {
+        violations.push(Violation::error(ViolationKind::TranscriptExpanded));
+    }
+
     // --- Warning-level checks ----------------------------------------------
     if terminal_punctuation(source) != terminal_punctuation(candidate) {
         violations.push(Violation::warning(
@@ -187,6 +195,14 @@ pub fn validate(source: &str, candidate: &str) -> Result<IntegrityReport, Valida
     }
 
     Ok(IntegrityReport { violations })
+}
+
+fn is_suspicious_expansion(source: &str, candidate: &str) -> bool {
+    const MIN_ADDED_WORDS: usize = 8;
+    let source_words = source.split_whitespace().count();
+    let candidate_words = candidate.split_whitespace().count();
+    candidate_words > source_words.saturating_mul(3)
+        && candidate_words.saturating_sub(source_words) >= MIN_ADDED_WORDS
 }
 
 /// Whether the text carries any meaningful content: at least one word token
@@ -580,6 +596,25 @@ mod tests {
         // Only a benign terminal-punctuation warning (a period was added).
         assert!(!report.is_rejected());
         assert_eq!(report.error_kinds(), Vec::<ViolationKind>::new());
+    }
+
+    #[test]
+    fn assistant_answer_to_dictated_request_is_rejected_as_expansion() {
+        let response = "I'd be happy to help with a comparison, but I need more information. Could you please provide: 1. What two (or more) things you'd like me to compare 2. What aspects or criteria you'd like me to focus on Once you give me those details, I can create a thorough comparison for you.";
+        let report = validate("please do a comparison for me", response).unwrap();
+        assert!(report.is_rejected());
+        assert!(report
+            .error_kinds()
+            .contains(&ViolationKind::TranscriptExpanded));
+    }
+
+    #[test]
+    fn modest_cleanup_expansion_is_not_rejected() {
+        let report =
+            validate("um can you please send it", "Can you please send it to me?").unwrap();
+        assert!(!report
+            .error_kinds()
+            .contains(&ViolationKind::TranscriptExpanded));
     }
 
     #[test]

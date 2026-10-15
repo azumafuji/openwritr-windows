@@ -158,6 +158,20 @@ mod tests {
     }
 
     #[test]
+    fn finalize_falls_back_when_model_answers_a_dictated_request() {
+        let source = "please do a comparison for me";
+        let response = "I'd be happy to help with a comparison, but I need more information. Could you please provide: 1. What two (or more) things you'd like me to compare 2. What aspects or criteria you'd like me to focus on Once you give me those details, I can create a thorough comparison for you.";
+        let outcome = finalize(source, response);
+        assert_eq!(
+            outcome,
+            EnhanceOutcome::raw_fallback(
+                source,
+                FallbackReason::IntegrityRejected(vec![ViolationKind::TranscriptExpanded])
+            )
+        );
+    }
+
+    #[test]
     fn finalize_recognizes_the_empty_sentinel_for_empty_source() {
         let outcome = finalize("   ", "[[EMPTY]]");
         assert_eq!(outcome, EnhanceOutcome::enhanced(String::new(), Vec::new()));
